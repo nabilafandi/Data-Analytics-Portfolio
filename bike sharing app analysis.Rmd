@@ -1,0 +1,471 @@
+---
+title: <br> 
+  Data Cleaning Process
+date: "`r Sys.Date()`"
+output:
+  rmdformats::downcute: 
+    self_contained: true
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(rmdformats)
+
+## Global options
+options(max.print="75")
+opts_chunk$set(echo=TRUE,
+               prompt=FALSE,
+               comment=NA,
+               message=FALSE,
+               warning=FALSE, 
+               results="hide")
+opts_knit$set(width=75)
+```
+
+# Scenario
+
+Cyclist is a fictional ride sharing app where we are going to solve some real-world simulated problem using data analysis.
+
+*"You are a junior data analyst working in the marketing analyst team at Cyclistic, a bike sharing company in Chicago. The director of marketing believes the company's future success depends on maximizing the number of annual memberships. Therefore, your team wants to understand how casual riders and annual members use Cyclistic bikes differently.*
+
+*From those insights, your team will design a new marketing strategy to convert casual riders into annual members. But first, Cyclistic executives must approve your recommendations, so they must be backed up with compelling data insights and professional data visualizations."*
+
+# About the Company
+
+Cyclistic launched a successful bike-share offering, since then the program has grown to a fleet of 5824 bike that are geotracked into a network of 692 stations across Chicago. The bikes can be unlocked from one station and returned to any other station in the system anytime.
+
+For now, the company's marketing strategy relied on building general awareness and appealing to broad consumer segments with flexible pricing plans:
+
+-   Single ride (casual)
+
+-   Full day (casual)
+
+-   Annual membership (member)
+
+Customers who purchase single-ride or full-day passes are referred to as casual riders. Customers who purchase annual memberships are Cyclistic members
+
+The company's finance analyst have concluded that annual member are much more profitable than casual riders. Although the pricing flexibility helps Cyclistic attracts more customers, they believes that maximizing the number of annual members will be key to future growth.
+
+# 1. Data Preparation
+
+The company have provided historical trip usage data. the data that will be explored are only the last 12 months of usage data between September 2021 and August 2022. Data provided first party by the Motivate International Inc. The monthly trip data can be downloaded from this [link](https://divvy-tripdata.s3.amazonaws.com/index.html).
+
+Data is organized in CSV tables separated by months. each tables contains trip data with: ride id, type of bike used, date and time when the bike is unlocked and returned, station name and id where the bike is unlocked and returned(including the coordinate where the latitude and longitude is), and the type of user who borrowed the bike (member or casual).
+
+About 15% of station names values are empty (NA). asides from that, they seem to meet the ROCCC standards.
+
+**Reliable** - The 15% of missing station names value seems to be scattered randomly, since there is no particular pattern of missing values that are prominent, also the data are big enough to be analysed (there are a total of 5883043 trip data with 15% of them are null value, so we're working with 4998678 trip data which is still big enough for the purpose of this analysis.)
+
+**Original** -- Data is owned by Cyclistic company itself that are provided first party by Motivate International Inc.
+
+**Comprehensive** -- Data that are being used consist of the last 12 months of transaction data which would reflect the entire year and can be splited by quartals.
+
+**Current** -- Data that are included for this analysis are the data from September 2021 to August 2022. This analysis is being held at October 2022
+
+**Cited** -- Data provided by Motivate International Inc which is a first party data that is owned by Cyclistic.
+
+**Licensing, Privacy, Security, and Accessibility**
+
+Even though the data provided are shared by a site that is accessibl to public, the raw data that are being worked on are stored in the local hard drive. That raw data itself won't be shared to the public. Also, the data provided doesn't include individual user information such as usernames, credit card number, and all of the stuffs that are categorized as private. Hence, the only data that are being shared are only processed tables and visualizations. The license to use this dataset can be located [here](https://www.divvybikes.com/data-license-agreement).
+
+# 2. Data Cleaning
+
+Here are the steps taken to clean and transform the raw dataset. The data being collected consist of monthly data from September 2021 to August 2022. It has the total size of 1,01 GB and they are separated by months. which would take such an extremely long time to append each table into a single file if we use spreadsheet or even Google Bigquerry. That's why we're using R Studio for this part of the step.
+
+### 2.1 Load Libraries
+
+```{r}
+library(tidyverse)
+library(lubridate)
+```
+
+### 2.2 Combine Datasets
+
+```{r}
+# read each 12 month tables
+aug22 <- read_csv('datasets/202208-divvy-tripdata.csv')
+jul22 <- read_csv('datasets/202207-divvy-tripdata.csv')
+jun22 <- read_csv('datasets/202206-divvy-tripdata.csv')
+may22 <- read_csv('datasets/202205-divvy-tripdata.csv')
+apr22 <- read_csv('datasets/202204-divvy-tripdata.csv')
+mar22 <- read_csv('datasets/202203-divvy-tripdata.csv')
+feb22 <- read_csv('datasets/202202-divvy-tripdata.csv')
+jan22 <- read_csv('datasets/202201-divvy-tripdata.csv')
+dec21 <- read_csv('datasets/202112-divvy-tripdata.csv')
+nov21 <- read_csv('datasets/202111-divvy-tripdata.csv')
+okt21 <- read_csv('datasets/202110-divvy-tripdata.csv')
+sep21 <- read_csv('datasets/202109-divvy-tripdata.csv')
+```
+
+we need to be sure that each csvs has the same structure.
+
+```{r}
+glimpse(aug22)
+glimpse(jul22)
+glimpse(jun22)
+glimpse(may22)
+glimpse(apr22)
+glimpse(mar22)
+glimpse(feb22)
+glimpse(jan22)
+glimpse(dec21)
+glimpse(nov21)
+glimpse(okt21)
+glimpse(sep21)
+```
+
+The result was that each month's csv has the same structures, every variable types matches with each and every single columns. That means that they are compatible so we can continue to the next step that is to merge them all into one table.
+
+```{r}
+#append all tables
+all_trips <- bind_rows(aug22,
+                       jul22,
+                       jun22,
+                       may22,
+                       apr22,
+                       mar22,
+                       feb22,
+                       jan22,
+                       dec21,
+                       nov21,
+                       okt21,
+                       sep21)
+```
+
+### 2.3 Prepare Datasets
+
+With tidyverse and lubridate library loaded, the merged all_trips table has been automatically converted into tible which means that every column has automatically adjusted to their appropriate datatype.
+
+```{r}
+glimpse(all_trips)
+```
+
+As shown from the result of the line of code above, the started_at and ended_at column has been automatically adjusted into \<dttm\> variable type which means that it's a datetime type.
+
+With that, to help us with the analysis, we can go on to the next step which is to calculate the ride length and determine the day of week of each rows. Also we can add new columns such as year, month, date, and hour.
+
+```{r}
+#calculate the ride length, determine the day of week, add: year, month, day, hour column
+all_trips_new <- mutate(all_trips, 
+                        ride_length = ended_at - started_at,
+                        day_of_week = wday(started_at, label = TRUE, abbr = FALSE, week_start = 1),
+                        year = year(started_at),
+                        month = month(started_at),
+                        day = day(started_at),
+                        hour = hour(started_at)
+)
+
+```
+
+for convenience sake, we can readjust the variable types of the new transformed table.
+
+```{r}
+#ride_length type is in <drtn>, need to be converted as <dbl>
+all_trips_new$ride_length <-  as.double(all_trips_new$ride_length)
+#year and month type is in <dbl>, need to be converted as <int>
+all_trips_new$year <- as.integer(all_trips_new$year)
+all_trips_new$month <- as.integer(all_trips_new$month)
+#member_casual type is in <chr>, need to be converted as <fct>
+all_trips_new$member_casual <- as.factor(all_trips_new$member_casual)
+
+```
+
+### 2.4 Clean Datasets
+
+```{r}
+all_trips_new %>% select(ride_length) %>% arrange(ride_length)
+```
+
+Looking at the ride_length column, we can identify that there are some values that doesn't makes sense. Some of them has a negative value.
+
+Those negative values need to be removed.
+
+```{r}
+#Remove rows with ride length < 0
+all_trips_cleaned <- all_trips_new %>% 
+  filter(!(ride_length < 0))
+```
+
+we also identified that there are NA values within start_station_name, start_station_id, end_station_name, end_station_id.
+
+Those rows of data should also be removed.
+
+```{r}
+all_trips_cleaned <- all_trips_cleaned %>% 
+  filter(!(is.na(start_station_name)) | start_station_name == "") %>% 
+  filter(!(is.na(end_station_name)) | end_station_name == "")
+```
+
+# 3. Analysis
+
+## 3.1 Behaviour
+
+### - Average Ride Length
+
+```{r}
+#average of ride length in member_casual
+avg_membertype <- all_trips_cleaned %>% group_by(member_casual) %>% summarise(average = mean(ride_length))
+avg_membertype %>% 
+  ggplot(aes(x = member_casual, y = average/60, fill = member_casual)) +
+  geom_bar(stat = "identity") +
+  labs(x = "",
+       y = "average (in minutes)",
+       title = "Average Ride Length") +
+  theme_bw()
+```
+
+### - Number of trips made by member type
+
+```{r}
+#count of each member_casual
+count_membertype <- all_trips_cleaned %>% 
+  group_by(member_casual) %>% 
+  summarise(count = n()) %>% 
+  ungroup() %>% 
+  mutate(perc = count / sum(count)) %>% 
+  arrange(perc) %>%
+  mutate(labels = scales::percent(perc))
+
+#plot
+count_membertype %>% ggplot(aes(x = "", y = perc, fill = member_casual)) +
+  geom_col(color = "black") +
+  geom_text(aes(label = labels),
+            position = position_stack(vjust = 0.5),
+            show.legend = FALSE) +
+  guides(fill = guide_legend(title = "")) +
+  coord_polar(theta = "y") +
+  labs(x = "",
+       y = "",
+       title = "Number of trips made") +
+  theme_void()
+```
+
+### - Categorical ride durations between user type
+
+```{r}
+#categorical ride durations between user type
+duration_group <- all_trips_cleaned %>% 
+  select(member_casual, ride_length, started_at, rideable_type) %>% 
+  mutate(minute = ride_length/60,
+         duration_category = case_when(minute < 30 ~ "0-30mins",
+                            minute < 45 ~ "30-45mins",
+                            minute < 180 ~ "45-180mins",
+                            minute >= 180 ~ ">180mins" ),
+         duration_category = as.factor(duration_category)) %>% 
+  group_by(member_casual, duration_category) %>% 
+  summarize(count = n())
+
+duration_group$duration_category <- factor((duration_group$duration_category),
+                                           levels = c("0-30mins", "30-45mins", "45-180mins", ">180mins"))
+duration_group %>% 
+  ggplot(aes(x = duration_category, y = count, fill = member_casual, group = member_casual)) +
+  geom_col(position = position_dodge(width = 0.5), width = 0.5) +
+  labs(title = "ride duration between user type")
+    # facet_wrap(~member_casual)
+
+duration_group %>%
+  filter(duration_category == "30-45mins") %>% 
+  ggplot(aes(x = duration_category, y = count, fill = member_casual, group = member_casual)) +
+  geom_col(position = position_dodge(width = 0.5), width = 0.5)
+```
+
+Members have a higher usage rate than casual users, however they tend to ride with a shorter amount of time within a single trip. Contrary to the casual users, they have a lower usage rate and longer ride in a single trip. Lower usage frequency with longer riding time can indicate that the bike was borrowed for the purpose of leisure, while higher usage frequency with shorter time can indicate that the bike was used for daily usage such as commuting to work. This confirms that Cyclistic casual users are more likely to ride for leisure while members use them for commuting.
+
+The majority of users spend their time riding for under 30 minutes. From reading the Cyclistic web page, we know that Members get a free 45 minutes quota, while single ride trips get 30 minutes trips. The weird thing is that ride length within the range of 30-45 minutes contains more casual members even knowing that they only get a 30 minutes quota. If they ride for more than 30 minutes, they should have just bought membership instead!
+
+## Recommendations
+
+-   The marketing campaign should target audiences who use Cyclistic for leisurely purposes
+
+-   The site says that single ride are great for quick trips whereas there are a significant amount of casual users who are riding for a quick trips. It should be emphasized that becoming members are cheaper than purchasing a single trip
+
+-   Casual users who ride within a 30-45 minutes range have a potential to become a member.
+
+-   Since casual users tends to have a longer ride, members can get benefit of having access to bike equipment such as: raincoats, helmets, and pouches
+
+## 3.2 Time
+
+### - Number of trips each month by member type
+
+```{r}
+#number of trip monthly by member type
+monthly_trip <- all_trips_cleaned %>% 
+  mutate(ymd = make_date(year, month)) %>% 
+  arrange(ymd) %>% 
+  group_by(ymd, member_casual) %>% 
+  summarize(count = n())
+#plot
+monthly_trip %>% ggplot(aes(x = ymd, y = count)) +
+  geom_line(aes(color = member_casual), size = 1) +
+  geom_point(size = 2, color = "black", stat = "identity") +
+  scale_x_date(date_labels="%b %Y", breaks = unique(monthly_trip$ymd)) +
+  labs(x = "",
+       y = "Number of trips",
+       title = "Number of trips by month") +
+  theme(axis.text.x = element_text(size = 5)) 
+
+```
+
+### - Daily trips by member type
+
+```{r}
+#daily trips
+daily_trips <- all_trips_cleaned %>% 
+  select(ride_id, rideable_type, member_casual, ride_length, day_of_week, started_at) %>% 
+  group_by(day_of_week, member_casual) %>% 
+  summarize(count = n(), avg = mean(ride_length)) %>% 
+  ungroup() %>% 
+  mutate(count = count/sum(count)) %>% 
+  mutate(labels = scales::percent(count)) %>% 
+  arrange(day_of_week)
+
+daily_trips %>% ggplot(aes(x = day_of_week, y = labels, fill = member_casual, group = member_casual)) +
+  geom_col(position = position_dodge(width = 0.5), width = 0.5) +
+  labs(title = "number of trips", y = "percentage")
+
+daily_trips %>% ggplot(aes(x = day_of_week, y = avg/60, fill = member_casual, group = member_casual)) +
+  geom_col(position = position_dodge(width = 0.5), width = 0.5) +
+  labs(title = "average ride length", y = "duration in minute")
+```
+
+There's an inclination of number of trips during holiday seasons for members and casual users. We can notice that casual users have a steeper inclination than members. Casual users are more active during the weekend whereas members are active on weekdays. In terms of ride duration, there isn't a noticeable difference for members. But casual users get an increased amount of ride duration during weekends.
+
+## Recommendations
+
+-   Currently membership only benefits consumers who are using Cyclstic to commute, there hasn't been a noticeable benefit for leisurely purposes.
+
+-   Marketing campaigns should be intensified during holiday seasons.
+
+-   The campaigns can highlight the theme of leisurely cycling during holiday and weekend.
+
+## 3.3 Bike Type
+
+### - Bike type used
+
+```{r}
+#percentage of bike type used
+biketype_pie <- all_trips_cleaned %>% 
+  select(ride_id, rideable_type, day_of_week, member_casual, ride_length) %>% 
+  group_by(rideable_type) %>% 
+  summarize(count = n()) %>% 
+  ungroup() %>% 
+  mutate(perc = count/sum(count)) %>%
+  arrange(count) %>% 
+  mutate(labels = scales::percent(perc))
+
+  
+biketype_pie %>% ggplot(aes(x = "", y = perc, fill = rideable_type)) +
+  geom_col(color = "black") +
+  geom_text(aes(label = labels),
+            position = position_stack(vjust = 0.3),
+            show.legend = FALSE) +
+  guides(fill = guide_legend(title = "")) +
+  coord_polar(theta = "y") +
+  labs(x = "",
+       y = "",
+       title = "Percentage of bike type used") +
+  theme_void()
+
+```
+
+### - Bike type used by member type
+
+```{r}
+bike_type_member <- all_trips_cleaned %>% 
+  select(ride_id, rideable_type, day_of_week, member_casual, ride_length) %>% 
+  group_by(member_casual, rideable_type) %>% 
+  summarize(count = n()) %>% 
+  mutate(perc = count/sum(count)) %>% 
+  ungroup() %>% 
+  mutate(percent = scales::percent(perc))
+
+bike_type_member %>% 
+  ggplot(aes(x = rideable_type, y = percent, fill = member_casual, group = member_casual)) +
+  geom_col(position = position_dodge(width = 0.5), width = 0.5) +
+  labs(title = "bike type used  by member type",x= "", y = "percentage") +
+  theme_bw()
+```
+
+Classic and electric bikes have an even ratio. Classic bikes are dominated by members whereas electric bikes are dominated by casual users. One odd thing that stands out is that docked bikes are only used specifically by casual users. There's not a single member who uses docked bikes.
+
+## Recommendations
+
+-   Since some casual users loves to ride docked bikes. there should be some specific member promos or benefits for electric bikes and docked bikes especially.
+
+## 3.4 Bike Station
+
+### - Most popular station
+
+```{r}
+#most popular station
+popular_station <- all_trips_cleaned %>% 
+  group_by(member_casual, start_station_name) %>% 
+  summarize(count = n()) %>% 
+  arrange(desc(count)) %>% 
+  head(30)
+
+popular_station %>%
+  ggplot(aes(x = reorder(start_station_name, count), y = count, fill = member_casual)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  labs(title = "Top 30 most popular station",
+       x = "station name") +
+  theme_bw()
+```
+
+### - Most popular station for casual users
+
+```{r}
+####most popular station for casual
+
+popular_station_bycasual <- all_trips_cleaned %>% 
+  filter(member_casual == "casual") %>% 
+  group_by(start_station_name) %>%
+  summarize(count = n()) %>%
+  arrange(desc(count)) %>%
+  head(30) 
+
+popular_station_bycasual %>%
+  ggplot(aes(x = reorder(start_station_name, count), y = count)) +
+  geom_bar(stat = "identity", fill = "#f8766d") +
+  coord_flip() +
+  labs(title = "Top 30 most popular station ",
+       subtitle = "member type: casual",
+       x = "station name") 
+
+```
+
+### - Most popular station for members
+
+```{r}
+####most popular station for members
+
+popular_station_bymember <- all_trips_cleaned %>% 
+  filter(member_casual == "member") %>% 
+  group_by(start_station_name) %>%
+  summarize(count = n()) %>%
+  arrange(desc(count)) %>%
+  head(30) 
+  
+popular_station_bymember %>%
+  ggplot(aes(x = reorder(start_station_name, count), y = count)) +
+  geom_bar(stat = "identity", fill = "#00BFC4") +
+  coord_flip() +
+  labs(title = "Top 30 most popular station ",
+       subtitle = "member type: member",
+       x = "station name") 
+```
+
+*Streeter Dr & Grand Ave* is the most popular station for casual users. The number of trips that started from that station out numbers the number one most popular station for members (Kingsbury St & Kinzie St).
+
+There are a number of prominent bike stations that are significantly more popular than the other. Particularly for the most popular stations for casual users, they are cramped on only the top 5 of most popular stations. This might indicate that those bike stations are tourist locations of Chicago and Evanston. On the other hand, the most popular station for members are more evenly distributed.
+
+## Recommendations
+
+-   *Streeter Dr & Grand Ave* has the highest potential to convert casual users into members.
+
+-   Marketing campaigns should be even more focused in those prominent areas: *Streeter Dr & Grand Ave, DuSable Lake Shore Dr & Monroe St, Millennium Park, Michigan Ave & Oak St, DuSable Lake Shore Dr & North Blvd, Shedd Aquarium, Theater on the Lake*
+
+-   Add people from outside Chicago and Evanston who intends on having a vacation as another target audience
+
+-   Cooperate with local businesses in those prominent areas (members of Cyclist gets a discounts for shopping there)
